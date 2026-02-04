@@ -1,10 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import backgroundImage from '../assets/booking.jpg'; // Adjust the path as needed
-
-
+import { supabase } from '../supabaseClient';
 
 const Home = () => {
+  const [completedBookings, setCompletedBookings] = useState(0);
+
+  useEffect(() => {
+    const fetchCompletedBookings = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('bookings')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'Completed');
+
+        if (error) throw error;
+        setCompletedBookings(count || 0);
+      } catch (error) {
+        console.error('Error fetching bookings count:', error);
+      }
+    };
+
+    fetchCompletedBookings();
+  }, []);
+
   const venueSpaces = [
     {
       id: 1,
@@ -169,16 +188,8 @@ const Home = () => {
                   <div className="text-gray-600">Years Experience</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600">4</div>
-                  <div className="text-gray-600">Event Spaces</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600">500+</div>
+                  <div className="text-3xl font-bold text-green-600">{completedBookings}+</div>
                   <div className="text-gray-600">Events Hosted</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600">95%</div>
-                  <div className="text-gray-600">Satisfaction Rate</div>
                 </div>
               </div>
             </div>
@@ -226,8 +237,17 @@ const Home = () => {
             </Link>
           </div>
           <div className="mt-8 text-lg">
-            <p>📍 {venueInfo.location}</p>
-            <p className="mt-2">📞 0912 345 6789 | ✉️ susing.rufin.farm@gmail.com</p>
+            <p>
+              <a 
+                href="https://www.google.com/maps/place/Susing+%26+Rufin's+Farm/@15.6141497,120.582076,18.5z/data=!4m16!1m9!3m8!1s0x3396cbf3b5c24ba9:0xca3a42b2040ab33f!2sSusing+%26+Rufin's+Farm!8m2!3d15.6138378!4d120.5829952!9m1!1b1!16s%2Fg%2F11tmrw7rp9!3m5!1s0x3396cbf3b5c24ba9:0xca3a42b2040ab33f!8m2!3d15.6138378!4d120.5829952!16s%2Fg%2F11tmrw7rp9?entry=ttu&g_ep=EgoyMDI2MDIwMS4wIKXMDSoASAFQAw%3D%3D"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-yellow-300 transition-colors flex items-center justify-center gap-2"
+              >
+                <span>📍</span> Find Us on Google Maps
+              </a>
+            </p>
+            <p className="mt-2">📞 0917 708 6051 | ✉️ susingandrufinsfarm0@gmail.com</p>
           </div>
         </div>
       </section>

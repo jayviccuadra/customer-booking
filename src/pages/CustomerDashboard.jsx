@@ -4,17 +4,17 @@ import { supabase } from '../supabaseClient'
 import { useNavigate } from 'react-router-dom'
 import { 
   FaCalendarAlt,
-  FaClock,
-  FaCheckCircle,
-  FaTimesCircle,
-  FaExclamationTriangle,
   FaCalendarCheck,
-  FaMoneyBillWave,
-  FaMapMarkerAlt,
-  FaUser,
-  FaPhone,
+  FaCheckCircle,
+  FaClock,
   FaEnvelope,
-  FaSearch
+  FaExclamationTriangle,
+  FaMapMarkerAlt,
+  FaMoneyBillWave,
+  FaPhone,
+  FaSearch,
+  FaTimesCircle,
+  FaUser
 } from 'react-icons/fa'
 
 const CustomerDashboard = () => {
@@ -337,15 +337,18 @@ const CustomerDashboard = () => {
 
                 {/* Action Buttons */}
                 <div className='flex flex-col sm:flex-row lg:flex-col gap-2'>
-                  {booking.status === 'pending' && (
+                  {/* Show Pay Now only if status is pending AND NOT Cash payment */}
+                  {booking.status === 'pending' && booking.paymentMethod !== 'Cash' && (
                     <button 
-                      onClick={() => navigate('/contact')}
-                      className='px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors flex items-center space-x-2'
+                      onClick={() => navigate('/dashboard/customer/booking')}
+                      className='px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition-all shadow-md flex items-center space-x-2'
                     >
-                      <FaEnvelope />
-                      <span>Inquire Payment</span>
+                      <FaMoneyBillWave />
+                      <span>Pay Now</span>
                     </button>
                   )}
+                  {/* If Cash payment, maybe show nothing or just status */}
+                  
                   {booking.status === 'confirmed' && (
                     <div className='text-center'>
                       <div className='flex items-center space-x-2 text-green-600 mb-2'>

@@ -93,6 +93,12 @@ const CustomerLogin = () => {
           };
           setUser(fallbackUser);
         } else {
+           // Check if user is banned
+           if (profile.status === 'banned') {
+             await supabase.auth.signOut();
+             throw new Error('Your account has been banned. Please contact support.');
+           }
+
            // Map Supabase profile to app user structure
            const appUser = {
              _id: profile.id,
@@ -126,6 +132,8 @@ const CustomerLogin = () => {
         errorState.message = 'Incorrect password';
       } else if (err.message.includes('Invalid login credentials')) {
         errorState.message = 'Invalid email or password';
+      } else if (err.message.includes('banned')) {
+        errorState.message = err.message;
       }
 
       setErrors(errorState);

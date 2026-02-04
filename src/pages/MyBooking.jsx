@@ -440,12 +440,22 @@ const MyBooking = () => {
     }
 
     if (bookingMode === 'package' && !selectedPackage) {
-      alert('Please select a package first.')
+      Swal.fire({
+        title: 'Selection Required',
+        text: 'Please select a package first or create your own package.',
+        icon: 'warning',
+        confirmButtonColor: '#3085d6'
+      })
       return
     }
 
     if (bookingMode === 'custom' && calculateTotal() === 0) {
-      alert('Please select at least one item.')
+      Swal.fire({
+        title: 'Selection Required',
+        text: 'Please select at least one item.',
+        icon: 'warning',
+        confirmButtonColor: '#3085d6'
+      })
       return
     }
 
@@ -669,28 +679,6 @@ const MyBooking = () => {
             <FaCalendarAlt className="text-blue-600" />
             Event Availability Calendar
           </h2>
-          <div className='flex items-center gap-4 text-sm font-medium flex-wrap'>
-            <div className='flex items-center gap-2'>
-              <div className="w-4 h-4 border-2 border-green-500 bg-green-50 rounded-full"></div>
-              <span className='text-gray-600'>Available</span>
-            </div>
-            <div className='flex items-center gap-2'>
-              <div className="w-4 h-4 border-2 border-yellow-500 bg-yellow-50 rounded-full"></div>
-              <span className='text-gray-600'>Pending</span>
-            </div>
-            <div className='flex items-center gap-2'>
-              <div className="w-4 h-4 border-2 border-blue-600 bg-blue-50 rounded-full"></div>
-              <span className='text-gray-600'>Approved</span>
-            </div>
-            <div className='flex items-center gap-2'>
-              <div className="w-4 h-4 border-2 border-orange-500 bg-orange-50 rounded-full"></div>
-              <span className='text-gray-600'>Rejected</span>
-            </div>
-            <div className='flex items-center gap-2'>
-              <div className="w-4 h-4 border-2 border-red-600 bg-red-50 rounded-full"></div>
-              <span className='text-gray-600'>Unavailable</span>
-            </div>
-          </div>
         </div>
         
         <div className='bg-white rounded-xl shadow-md p-2'>
@@ -1045,19 +1033,22 @@ const MyBooking = () => {
                          <h3 className='text-2xl font-bold text-gray-800'>{booking.event_name}</h3>
                          <div className='flex flex-wrap items-center gap-2 mt-2'>
                            <span className='px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium'>
-                             {booking.event_type}
-                           </span>
-                           <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusBadge(booking.status?.toLowerCase())}`}>
-                             {booking.status}
-                           </span>
-                           <span className={`px-3 py-1 rounded-full text-sm font-medium border ${
-                             booking.payment_status === 'Paid' 
-                               ? 'bg-green-100 text-green-800 border-green-200'
-                               : 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                           }`}>
-                             Payment: {booking.payment_status}
-                           </span>
-                         </div>
+                            {booking.event_type}
+                          </span>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusBadge(booking.status?.toLowerCase())}`}>
+                            {booking.status}
+                          </span>
+                          {/* Only show payment status if it exists (not null/empty) */}
+                          {booking.payment_status && (
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium border ${
+                                booking.payment_status === 'Paid' 
+                                ? 'bg-green-100 text-green-800 border-green-200'
+                                : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                            }`}>
+                                Payment: {booking.payment_status}
+                            </span>
+                          )}
+                        </div>
                        </div>
                      </div>
                      <div className='text-right'>
@@ -1106,7 +1097,7 @@ const MyBooking = () => {
                          
                          {/* Actions */}
                          <div className="flex gap-3 mt-4">
-                           {booking.status !== 'Cancelled' && booking.status !== 'Refund Requested' && !isPastDate(new Date(booking.date)) && (
+                           {booking.status !== 'Cancelled' && booking.status !== 'Refund Requested' && booking.status !== 'Rejected' && !isPastDate(new Date(booking.date)) && (
                              <button 
                                onClick={() => handleCancelBooking(booking.id)}
                                className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium text-sm transition-colors"
@@ -1115,7 +1106,17 @@ const MyBooking = () => {
                              </button>
                            )}
                            
-                           {(booking.payment_status === 'Paid' || booking.payment_status === 'Partial') && booking.status !== 'Refund Requested' && (
+                           {/* Refund button logic: 
+                               1. Must have paid (payment_status === 'Paid')
+                               2. Can request if:
+                                  - Booking is Cancelled (by customer)
+                                  - Booking is Rejected (by admin)
+                                  - Booking is still active (but they want to cancel & refund?) - usually cancel first.
+                                  - BUT user said: "if the payment is paid but the customer cancelled it or the admin rejected it then they can request a refund also"
+                                  - This implies if they cancel, the status becomes 'Cancelled', then they should see 'Request Refund'.
+                                  - So we show it if status is NOT 'Refund Requested' AND payment is 'Paid'.
+                           */}
+                           {(booking.payment_status === 'Paid') && booking.status !== 'Refund Requested' && (
                              <button 
                                onClick={() => handleRequestRefund(booking.id)}
                                className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 font-medium text-sm transition-colors"
@@ -1212,13 +1213,69 @@ const MyBooking = () => {
                           <span className="text-blue-500">{config.icon}</span>
                           {config.label}
                         </h4>
-                        <ul className="space-y-2">
+                        <ul className="space-y-3">
                           {items.map((item, idx) => (
-                             <li key={idx} className="flex justify-between items-start text-sm text-gray-600 bg-white p-2 rounded border border-gray-100">
-                               <span className="font-medium">{item.name}</span>
-                               {item.quantity && item.quantity > 1 && (
-                                 <span className="font-bold text-blue-600 bg-blue-50 px-2 rounded-full text-xs">x{item.quantity}</span>
-                               )}
+                             <li key={idx} className="text-sm text-gray-600 bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
+                               <div className="flex justify-between items-start mb-1">
+                                 <span className="font-bold text-gray-800">{item.name}</span>
+                                 {item.quantity && item.quantity > 1 && (
+                                   <span className="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full text-xs">x{item.quantity}</span>
+                                 )}
+                               </div>
+                               
+                               <div className="text-xs space-y-1 text-gray-500 pl-1">
+                                 {category === 'dishes' && (
+                                   <>
+                                     {item.serving_size && <p><span className="font-semibold">Serving:</span> {item.serving_size}</p>}
+                                     {item.description && <p className='italic'>{item.description}</p>}
+                                   </>
+                                 )}
+                                 {category === 'beverages' && (
+                                   <>
+                                     {item.serving_unit && <p><span className="font-semibold">Unit:</span> {item.serving_unit}</p>}
+                                     {item.description && <p className='italic'>{item.description}</p>}
+                                   </>
+                                 )}
+                                 {category === 'soundSystems' && (
+                                   <>
+                                     {item.coverage_pax && <p><span className="font-semibold">Coverage:</span> {item.coverage_pax}</p>}
+                                     {item.duration && <p><span className="font-semibold">Duration:</span> {item.duration}</p>}
+                                     {item.description && <p className='italic'>{item.description}</p>}
+                                   </>
+                                 )}
+                                 {category === 'lights' && (
+                                   <>
+                                     {item.type && <p><span className="font-semibold">Type:</span> {item.type}</p>}
+                                     {item.unit && <p><span className="font-semibold">Unit:</span> {item.unit}</p>}
+                                     {item.duration && <p><span className="font-semibold">Duration:</span> {item.duration}</p>}
+                                     {item.description && <p className='italic'>{item.description}</p>}
+                                   </>
+                                 )}
+                                 {category === 'decor' && (
+                                   <>
+                                     {item.type && <p><span className="font-semibold">Type:</span> {item.type}</p>}
+                                     {item.theme && <p><span className="font-semibold">Theme:</span> {item.theme}</p>}
+                                     {item.unit && <p><span className="font-semibold">Unit:</span> {item.unit}</p>}
+                                     {item.description && <p className='italic'>{item.description}</p>}
+                                   </>
+                                 )}
+                                 {category === 'equipment' && (
+                                   <>
+                                     {item.unit && <p><span className="font-semibold">Unit:</span> {item.unit}</p>}
+                                     {item.description && <p className='italic'>{item.description}</p>}
+                                   </>
+                                 )}
+                                 {category === 'mediaServices' && (
+                                   <>
+                                     {item.service_type && <p><span className="font-semibold">Type:</span> {item.service_type}</p>}
+                                     {item.duration_hours && <p><span className="font-semibold">Duration:</span> {item.duration_hours} hrs</p>}
+                                     {item.inclusions && <p><span className="font-semibold">Inclusions:</span> {item.inclusions}</p>}
+                                     {item.output_type && <p><span className="font-semibold">Output:</span> {item.output_type}</p>}
+                                     {item.special_inclusions && <p><span className="font-semibold">Special:</span> {item.special_inclusions}</p>}
+                                     {item.turnaround_time && <p><span className="font-semibold">Turnaround:</span> {item.turnaround_time}</p>}
+                                   </>
+                                 )}
+                               </div>
                              </li>
                           ))}
                         </ul>
