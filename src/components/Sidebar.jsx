@@ -28,6 +28,7 @@ const Sidebar = () => {
         { path: '/dashboard/customer', label: 'Dashboard', icon: '📊' },
         // { path: '/dashboard/customer/events', label: 'Events', icon: '🎪' },
         { path: '/dashboard/customer/booking', label: 'My Booking', icon: '📋' },
+        { path: '/dashboard/customer/messages', label: 'Messages', icon: '💬' },
     ]
 
     const commonMenu = [

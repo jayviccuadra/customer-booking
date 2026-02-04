@@ -32,7 +32,7 @@ const Navbar = () => {
             >
               Home
             </Link>
-            {/* <Link 
+            <Link 
               to="/venues" 
               className={`px-3 py-2 rounded-md text-sm font-medium transition duration-300 ${
                 isActiveLink('/venues') 
@@ -41,7 +41,7 @@ const Navbar = () => {
               }`}
             >
               Our Spaces
-            </Link> */}
+            </Link>
             <Link 
               to="/about" 
               className={`px-3 py-2 rounded-md text-sm font-medium transition duration-300 ${

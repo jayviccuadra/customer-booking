@@ -131,6 +131,41 @@ const AccountSettings = () => {
     }
   }
 
+  // Handle account deletion request
+  const handleDeletionRequest = async () => {
+    Swal.fire({
+      title: 'Request Account Deletion?',
+      text: "This action cannot be undone. Your account will be marked for deletion and reviewed by an administrator.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, request deletion'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        setLoading(true);
+        try {
+          const { error } = await supabase
+            .from('customers')
+            .update({ 
+              deletion_requested: true,
+              deletion_requested_at: new Date().toISOString()
+            })
+            .eq('auth_id', user.auth_id);
+
+          if (error) throw error;
+
+          showSuccessAlert('Request Sent', 'Your account deletion request has been submitted to the admin.');
+        } catch (error) {
+          console.error('Error requesting deletion:', error);
+          showErrorAlert('Request Failed', 'Failed to submit deletion request. Please try again.');
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
+  };
+
   // Handle password change
   const handlePasswordChange = async (e) => {
     e.preventDefault()
@@ -314,23 +349,32 @@ const AccountSettings = () => {
                         <p className='text-xs text-gray-500 mt-1'>Username cannot be changed</p>
                       </div>
 
-                      {/* Role Field (Read-only) */}
-                      <div>
-                        <label className='block text-sm font-medium text-gray-700 mb-2'>
-                          Role
-                        </label>
-                        <div className='w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg'>
-                          <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
-                            user?.role === 'Admin' 
-                              ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                              : user?.role === 'Staff'
-                              ? 'bg-green-100 text-green-800 border border-green-200'
-                              : 'bg-gray-100 text-gray-800 border border-gray-200'
-                          }`}>
-                            {user?.role || 'User'}
-                          </span>
+                      {/* Role Field (Read-only) - Replaced with Account Deletion */}
+                      {user?.role !== 'Staff' && (
+                        <div>
+                          <label className='block text-sm font-medium text-gray-700 mb-2'>
+                            Account Actions
+                          </label>
+                          <div className='w-full p-4 bg-red-50 border border-red-200 rounded-lg'>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="text-red-800 font-medium">Request Account Deletion</h4>
+                                <p className="text-red-600 text-sm mt-1">
+                                  Want to leave? You can request to have your account and data deleted.
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={handleDeletionRequest}
+                                className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded hover:bg-red-700 transition-colors shadow-sm"
+                                disabled={loading}
+                              >
+                                Request Deletion
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       {/* Action Buttons */}
                       {isEditing && (

@@ -106,10 +106,7 @@ const Home = () => {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
           <div className=" rounded-3xl p-8 lg:p-12   ">
             <h1 className="text-4xl lg:text-6xl font-bold mb-6 leading-tight">
-              Web-Based Development of
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-orange-300 mt-2">
-                Events and Booking Management System
-              </span>
+              Welcome to
             </h1>
             <h2 className="text-3xl lg:text-5xl font-bold mb-6 text-yellow-300">
               Susing and Rufin's Farm
@@ -126,7 +123,7 @@ const Home = () => {
                 to="/venues"
                 className="bg-green-600 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-green-700 transition duration-300 shadow-lg transform hover:scale-105"
               >
-                Explore Our Spaces
+                View all Spaces
               </Link>
               <Link
                 to="/contact"
@@ -222,16 +219,10 @@ const Home = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              to="/venues"
-              className="bg-white text-green-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-gray-100 transition duration-300"
-            >
-              View All Spaces
-            </Link>
-            <Link
-              to="/contact"
+              to="/register"
               className="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-white hover:text-green-600 transition duration-300"
             >
-              Contact Us
+              Signup now!
             </Link>
           </div>
           <div className="mt-8 text-lg">

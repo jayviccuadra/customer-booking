@@ -199,7 +199,7 @@ const MyBooking = () => {
       const { data, error } = await supabase
         .from('bookings')
         .select('date, status')
-        .in('status', ['Confirmed', 'Pending'])
+        // .in('status', ['Confirmed', 'Pending']) // Fetch all statuses to handle Rejected/Unavailable
       
       if (error) throw error
 
@@ -221,7 +221,17 @@ const MyBooking = () => {
     const day = String(date.getDate()).padStart(2, '0')
     const dateStr = `${year}-${month}-${day}`
     
-    return bookedDates.find(b => b.date === dateStr)
+    const bookingsForDate = bookedDates.filter(b => b.date === dateStr);
+    
+    if (bookingsForDate.length === 0) return null;
+
+    // Priority: Confirmed/Approved > Unavailable > Pending > Rejected
+    if (bookingsForDate.some(b => b.status === 'Confirmed' || b.status === 'Approved')) return { status: 'Approved' };
+    if (bookingsForDate.some(b => b.status === 'Unavailable')) return { status: 'Unavailable' };
+    if (bookingsForDate.some(b => b.status === 'Pending')) return { status: 'Pending' };
+    if (bookingsForDate.some(b => b.status === 'Rejected')) return { status: 'Rejected' };
+    
+    return bookingsForDate[0];
   }
 
   // Helper to check if date is in the past
@@ -235,12 +245,26 @@ const MyBooking = () => {
   const tileClassName = ({ date, view }) => {
     if (view === 'month') {
       const booking = getBookingStatus(date)
-      if (booking) {
-        return booking.status === 'Confirmed' 
-          ? 'bg-red-100 text-red-800 font-bold hover:bg-red-200' 
-          : 'bg-yellow-100 text-yellow-800 font-bold hover:bg-yellow-200'
+      // Outline box style: Border with light background
+      const baseClass = 'border-2 font-bold hover:shadow-md transition-all';
+      
+      if (!booking) {
+        return `${baseClass} border-green-500 text-green-700 bg-green-50`;
       }
-      return 'bg-green-50 text-green-800 hover:bg-green-100'
+
+      switch (booking.status) {
+        case 'Approved':
+        case 'Confirmed':
+          return `${baseClass} border-blue-600 text-blue-700 bg-blue-50`;
+        case 'Pending':
+          return `${baseClass} border-yellow-500 text-yellow-700 bg-yellow-50`;
+        case 'Unavailable':
+          return `${baseClass} border-red-600 text-red-700 bg-red-50`;
+        case 'Rejected':
+          return `${baseClass} border-orange-500 text-orange-700 bg-orange-50`;
+        default:
+          return `${baseClass} border-gray-400 text-gray-700 bg-gray-50`;
+      }
     }
   }
 
@@ -314,6 +338,48 @@ const MyBooking = () => {
     })
     return total
   }
+
+  const [isPolling, setIsPolling] = useState(false);
+  const [pollingBookingId, setPollingBookingId] = useState(null);
+
+  useEffect(() => {
+    let interval;
+    if (isPolling && pollingBookingId) {
+      interval = setInterval(async () => {
+        try {
+          const { data, error } = await supabase
+            .from('bookings')
+            .select('payment_status')
+            .eq('id', pollingBookingId)
+            .single();
+
+          if (data && data.payment_status === 'Paid') {
+            setIsPolling(false);
+            setPollingBookingId(null);
+            Swal.fire('Success', 'Payment confirmed! Your booking is now secure.', 'success');
+            fetchBookedDates();
+            // Redirect or refresh bookings list
+            // Since we are already on the booking page, we just refresh the data
+            const customerId = user.id || user._id;
+            const { data: bookingsData } = await supabase
+              .from('bookings')
+              .select('*')
+              .eq('customer_id', customerId)
+              .order('created_at', { ascending: false });
+            if (bookingsData) setBookings(bookingsData);
+            
+            setShowBookingSection(false);
+            
+            // Optionally redirect to main dashboard if requested, but staying here shows the updated list
+            // window.location.href = '/dashboard/customer'; 
+          }
+        } catch (err) {
+          console.error("Polling error:", err);
+        }
+      }, 3000); // Poll every 3 seconds
+    }
+    return () => clearInterval(interval);
+  }, [isPolling, pollingBookingId, user]);
 
   const handleBookEvent = async () => {
     console.log('Attempting to book event...');
@@ -430,7 +496,24 @@ const MyBooking = () => {
           
           if (checkoutUrl) {
             console.log('Redirecting to payment:', checkoutUrl);
-            window.location.href = checkoutUrl;
+            // Open PayMongo in new tab
+            window.open(checkoutUrl, '_blank');
+            
+            // Start polling in current tab
+            setPollingBookingId(data[0].id);
+            setIsPolling(true);
+            
+            Swal.fire({
+              title: 'Payment in Progress',
+              text: 'A new tab has opened for payment. We are waiting for your confirmation...',
+              icon: 'info',
+              showConfirmButton: false,
+              allowOutsideClick: false,
+              allowEscapeKey: false,
+              didOpen: () => {
+                Swal.showLoading();
+              }
+            });
           } else {
             throw new Error('No checkout URL received');
           }
@@ -526,17 +609,25 @@ const MyBooking = () => {
             <FaCalendarAlt className="text-blue-600" />
             Event Availability Calendar
           </h2>
-          <div className='flex items-center gap-4 text-sm font-medium'>
+          <div className='flex items-center gap-4 text-sm font-medium flex-wrap'>
             <div className='flex items-center gap-2'>
-              <FaCircle className="text-green-100 text-lg border border-gray-200 rounded-full" />
+              <div className="w-4 h-4 border-2 border-green-500 bg-green-50 rounded-full"></div>
               <span className='text-gray-600'>Available</span>
             </div>
             <div className='flex items-center gap-2'>
-              <FaCircle className="text-yellow-100 text-lg border border-yellow-200 rounded-full" />
+              <div className="w-4 h-4 border-2 border-yellow-500 bg-yellow-50 rounded-full"></div>
               <span className='text-gray-600'>Pending</span>
             </div>
             <div className='flex items-center gap-2'>
-              <FaCircle className="text-red-100 text-lg border border-red-200 rounded-full" />
+              <div className="w-4 h-4 border-2 border-blue-600 bg-blue-50 rounded-full"></div>
+              <span className='text-gray-600'>Approved</span>
+            </div>
+            <div className='flex items-center gap-2'>
+              <div className="w-4 h-4 border-2 border-orange-500 bg-orange-50 rounded-full"></div>
+              <span className='text-gray-600'>Rejected</span>
+            </div>
+            <div className='flex items-center gap-2'>
+              <div className="w-4 h-4 border-2 border-red-600 bg-red-50 rounded-full"></div>
               <span className='text-gray-600'>Unavailable</span>
             </div>
           </div>
@@ -550,7 +641,7 @@ const MyBooking = () => {
                 const booking = getBookingStatus(date)
                 if (booking) {
                   return (
-                    <div className='mt-2 text-xs font-bold w-full text-right'>
+                    <div className='mt-2 text-xs font-bold w-full text-right uppercase'>
                       {booking.status}
                     </div>
                   )

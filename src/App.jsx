@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import About from './pages/About';
 import Contact from './pages/Contact';
+import Venues from './pages/Venues';
 import Layout from './pages/Layout';
 import AuthContext from './context/AuthContext';
 import Login from './components/auth/Login';
@@ -13,6 +14,7 @@ import AccountSettings from './pages/AccountSettings';
 import CustomerDashboard from './pages/CustomerDashboard';
 import CustomerEvents from './pages/CustomerEvents';
 import MyBooking from './pages/MyBooking';
+import CustomerMessages from './pages/CustomerMessages';
 
 function App() {
   return (
@@ -22,6 +24,7 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
             <Route path="about" element={<About />} />
+            <Route path="venues" element={<Venues />} />
             <Route path="contact" element={<Contact />} />
             <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />
@@ -44,6 +47,9 @@ function App() {
            </ProtectedRoute>}/>
             <Route path='customer/booking' element={<ProtectedRoute allowedRoles={['Customer']}>
               <MyBooking/>
+           </ProtectedRoute>}/>
+            <Route path='customer/messages' element={<ProtectedRoute allowedRoles={['Customer']}>
+              <CustomerMessages/>
            </ProtectedRoute>}/>
              <Route path='settings' element={<ProtectedRoute >
                   <AccountSettings/>
