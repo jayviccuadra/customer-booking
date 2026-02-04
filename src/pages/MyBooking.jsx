@@ -356,6 +356,12 @@ const MyBooking = () => {
           if (data && data.payment_status === 'Paid') {
             setIsPolling(false);
             setPollingBookingId(null);
+            
+            // Close the loading modal if it's open
+            if (Swal.isVisible()) {
+              Swal.close();
+            }
+
             Swal.fire('Success', 'Payment confirmed! Your booking is now secure.', 'success');
             fetchBookedDates();
             // Redirect or refresh bookings list
