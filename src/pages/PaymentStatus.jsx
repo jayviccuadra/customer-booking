@@ -1,12 +1,40 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import { supabase } from '../supabaseClient';
 
 const PaymentStatus = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const status = searchParams.get('status');
   const isSuccess = status === 'success';
+
+  // Handle DB Update on Success (Fallback for missing backend webhook)
+  useEffect(() => {
+    const updatePaymentStatus = async () => {
+      const bookingId = localStorage.getItem('pending_payment_booking_id');
+      if (isSuccess && bookingId) {
+        console.log('Updating payment status for booking:', bookingId);
+        try {
+          const { error } = await supabase
+            .from('bookings')
+            .update({ payment_status: 'Paid' })
+            .eq('id', bookingId);
+          
+          if (error) {
+             console.error('Error updating payment status:', error);
+          } else {
+             console.log('Payment status updated to Paid');
+             localStorage.removeItem('pending_payment_booking_id');
+          }
+        } catch (err) {
+          console.error('Unexpected error updating payment status:', err);
+        }
+      }
+    };
+    
+    updatePaymentStatus();
+  }, [isSuccess]);
 
   // Automatically redirect after 5 seconds
   useEffect(() => {

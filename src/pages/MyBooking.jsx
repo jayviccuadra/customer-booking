@@ -510,6 +510,10 @@ const MyBooking = () => {
           
           if (checkoutUrl) {
             console.log('Redirecting to payment:', checkoutUrl);
+            
+            // Store booking ID for PaymentStatus page to pick up (fallback for missing webhook)
+            localStorage.setItem('pending_payment_booking_id', data[0].id);
+
             // Open PayMongo in new tab
             window.open(checkoutUrl, '_blank');
             
@@ -521,11 +525,31 @@ const MyBooking = () => {
               title: 'Payment in Progress',
               text: 'A new tab has opened for payment. We are waiting for your confirmation...',
               icon: 'info',
-              showConfirmButton: false,
+              showConfirmButton: true,
+              confirmButtonText: 'I have completed the payment',
+              showCancelButton: false,
               allowOutsideClick: false,
               allowEscapeKey: false,
               didOpen: () => {
                 Swal.showLoading();
+              }
+            }).then((result) => {
+              if (result.isConfirmed) {
+                // User clicked "I have completed the payment"
+                // Manual check is handled by the polling, but we can force a refresh or close
+                setIsPolling(false);
+                setPollingBookingId(null);
+                fetchBookedDates();
+                // Refresh bookings list
+                const customerId = user.id || user._id;
+                supabase
+                  .from('bookings')
+                  .select('*')
+                  .eq('customer_id', customerId)
+                  .order('created_at', { ascending: false })
+                  .then(({ data: bookingsData }) => {
+                    if (bookingsData) setBookings(bookingsData);
+                  });
               }
             });
           } else {
