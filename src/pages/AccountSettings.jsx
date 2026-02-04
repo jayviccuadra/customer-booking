@@ -287,13 +287,13 @@ const AccountSettings = () => {
                         {user?.fullname?.charAt(0).toUpperCase() || 'U'}
                       </span>
                     </div>
-                    <p className='text-sm text-gray-600 mb-4'>Profile Picture</p>
+                    {/* <p className='text-sm text-gray-600 mb-4'>Profile Picture</p>
                     <button 
                       className='text-blue-600 text-sm font-medium hover:text-blue-700 disabled:opacity-50'
                       disabled={loading}
                     >
                       Change Photo
-                    </button>
+                    </button> */}
                   </div>
                 </div>
 

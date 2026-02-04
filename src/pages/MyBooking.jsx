@@ -221,24 +221,34 @@ const MyBooking = () => {
     const day = String(date.getDate()).padStart(2, '0')
     const dateStr = `${year}-${month}-${day}`
     
-    // Filter out cancelled/rejected/refunded
-    const activeBookings = bookedDates.filter(b => 
-        b.date === dateStr && 
-        !['Cancelled', 'Rejected', 'Refunded', 'Refund Requested'].includes(b.status)
-    );
+    // Get all bookings for this date
+    const bookingsForDate = bookedDates.filter(b => b.date === dateStr);
     
-    if (activeBookings.length === 0) return null;
+    if (bookingsForDate.length === 0) return null;
 
     const currentCustomerId = user?.id || user?._id;
 
-    // Check if current user has a booking on this date
-    const myBooking = activeBookings.find(b => b.customer_id === currentCustomerId);
+    // 1. Check if current user has a booking on this date
+    // We want to show the user's own status if they have one (Pending, Approved, Rejected)
+    // We usually ignore Cancelled/Refunded unless we want to show history, but typically those free up the slot.
+    const myBooking = bookingsForDate.find(b => 
+        b.customer_id === currentCustomerId &&
+        !['Cancelled', 'Refunded', 'Refund Requested'].includes(b.status)
+    );
+
     if (myBooking) {
-        return myBooking; // Return my booking status (Pending/Confirmed/etc)
+        return myBooking; // Return my booking status (Pending/Approved/Rejected)
     }
 
-    // If no booking for me, but there are active bookings for others
-    if (activeBookings.length > 0) {
+    // 2. If no active booking for me, check if there are active bookings for others
+    // For others, we ONLY care if it blocks the calendar (Pending, Confirmed, Approved)
+    // Rejected/Cancelled/Refunded by others does NOT block the calendar.
+    const hasActiveOtherBooking = bookingsForDate.some(b => 
+        b.customer_id !== currentCustomerId &&
+        ['Pending', 'Confirmed', 'Approved', 'Unavailable'].includes(b.status)
+    );
+
+    if (hasActiveOtherBooking) {
         // If there are other bookings (Pending, Confirmed, Approved, or Unavailable), show as Unavailable
         return { status: 'Unavailable', isOther: true };
     }
