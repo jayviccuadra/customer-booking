@@ -221,17 +221,29 @@ const MyBooking = () => {
     const day = String(date.getDate()).padStart(2, '0')
     const dateStr = `${year}-${month}-${day}`
     
-    const bookingsForDate = bookedDates.filter(b => b.date === dateStr);
+    // Filter out cancelled/rejected/refunded
+    const activeBookings = bookedDates.filter(b => 
+        b.date === dateStr && 
+        !['Cancelled', 'Rejected', 'Refunded', 'Refund Requested'].includes(b.status)
+    );
     
-    if (bookingsForDate.length === 0) return null;
+    if (activeBookings.length === 0) return null;
 
-    // Priority: Confirmed/Approved > Unavailable > Pending > Rejected
-    if (bookingsForDate.some(b => b.status === 'Confirmed' || b.status === 'Approved')) return { status: 'Approved' };
-    if (bookingsForDate.some(b => b.status === 'Unavailable')) return { status: 'Unavailable' };
-    if (bookingsForDate.some(b => b.status === 'Pending')) return { status: 'Pending' };
-    if (bookingsForDate.some(b => b.status === 'Rejected')) return { status: 'Rejected' };
+    const currentCustomerId = user?.id || user?._id;
+
+    // Check if current user has a booking on this date
+    const myBooking = activeBookings.find(b => b.customer_id === currentCustomerId);
+    if (myBooking) {
+        return myBooking; // Return my booking status (Pending/Confirmed/etc)
+    }
+
+    // If no booking for me, but there are active bookings for others
+    if (activeBookings.length > 0) {
+        // If there are other bookings (Pending, Confirmed, Approved, or Unavailable), show as Unavailable
+        return { status: 'Unavailable', isOther: true };
+    }
     
-    return bookingsForDate[0];
+    return null;
   }
 
   // Helper to check if date is in the past
