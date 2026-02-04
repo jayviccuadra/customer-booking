@@ -357,12 +357,20 @@ const MyBooking = () => {
             setIsPolling(false);
             setPollingBookingId(null);
             
-            // Close the loading modal if it's open
-            if (Swal.isVisible()) {
-              Swal.close();
-            }
+            // Close all swal instances immediately
+            Swal.close();
 
-            Swal.fire('Success', 'Payment confirmed! Your booking is now secure.', 'success');
+            // Wait a brief moment to ensure modal is gone before showing success
+            setTimeout(() => {
+                Swal.fire({
+                    title: 'Success!',
+                    text: 'Payment confirmed! Your booking is now secure.',
+                    icon: 'success',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            }, 300);
+
             fetchBookedDates();
             // Redirect or refresh bookings list
             // Since we are already on the booking page, we just refresh the data
