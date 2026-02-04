@@ -713,8 +713,22 @@ const MyBooking = () => {
                 )
               }
             }}
-            onClickDay={(date) => setSelectedDate(date)}
+            onClickDay={(date) => {
+                const booking = getBookingStatus(date);
+                if (booking && booking.status === 'Unavailable') {
+                    // Prevent selecting unavailable dates
+                    return;
+                }
+                if (isPastDate(date)) {
+                    return;
+                }
+                setSelectedDate(date);
+            }}
             value={selectedDate}
+            tileDisabled={({ date }) => {
+                const booking = getBookingStatus(date);
+                return (booking && booking.status === 'Unavailable') || isPastDate(date);
+            }}
           />
         </div>
       </div>
