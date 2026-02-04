@@ -15,6 +15,7 @@ import CustomerDashboard from './pages/CustomerDashboard';
 import CustomerEvents from './pages/CustomerEvents';
 import MyBooking from './pages/MyBooking';
 import CustomerMessages from './pages/CustomerMessages';
+import PaymentStatus from './pages/PaymentStatus';
 
 function App() {
   return (
@@ -30,6 +31,9 @@ function App() {
             <Route path="register" element={<Register />} />
           </Route>
           
+          {/* Payment Status Route (Public/Protected depending on needs, kept public for simplicity of callback) */}
+          <Route path="/payment-status" element={<PaymentStatus />} />
+
           {/* Customer Routes */}
           <Route 
             path="dashboard" 
