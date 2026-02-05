@@ -467,6 +467,10 @@ const MyBooking = () => {
           if (result.isConfirmed) {
             setIsPolling(false);
             setPollingBookingId(null);
+            
+            // Refresh calendar availability
+            fetchBookedDates();
+
             // Refresh bookings list
             const customerId = user.id || user._id;
             supabase
@@ -511,6 +515,9 @@ const MyBooking = () => {
                 timer: 3000,
                 showConfirmButton: false
             });
+
+            // Refresh calendar availability
+            fetchBookedDates();
 
             // Refresh bookings
             const customerId = user?.id || user?._id;
