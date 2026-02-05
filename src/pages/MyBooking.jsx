@@ -562,6 +562,12 @@ const MyBooking = () => {
       return
     }
 
+    // Format date to YYYY-MM-DD to ensure compatibility
+    const year = selectedDate.getFullYear()
+    const month = String(selectedDate.getMonth() + 1).padStart(2, '0')
+    const day = String(selectedDate.getDate()).padStart(2, '0')
+    const formattedDate = `${year}-${month}-${day}`
+
     // Double check with Database if date is already booked (Real-time check)
     try {
         const { data: existingBookings, error: checkError } = await supabase
@@ -617,12 +623,6 @@ const MyBooking = () => {
     const inclusions = bookingMode === 'package' 
       ? selectedPackage.inclusions 
       : customSelection
-
-    // Format date to YYYY-MM-DD to ensure compatibility
-    const year = selectedDate.getFullYear()
-    const month = String(selectedDate.getMonth() + 1).padStart(2, '0')
-    const day = String(selectedDate.getDate()).padStart(2, '0')
-    const formattedDate = `${year}-${month}-${day}`
 
     const bookingData = {
       customer_id: customerId, // Using validated user.id
