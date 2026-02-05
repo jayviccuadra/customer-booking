@@ -198,7 +198,7 @@ const MyBooking = () => {
     try {
       const { data, error } = await supabase
         .from('bookings')
-        .select('date, status')
+        .select('date, status, customer_id')
         // .in('status', ['Confirmed', 'Pending']) // Fetch all statuses to handle Rejected/Unavailable
       
       if (error) throw error
@@ -245,7 +245,7 @@ const MyBooking = () => {
     // Rejected/Cancelled/Refunded by others does NOT block the calendar.
     const hasActiveOtherBooking = bookingsForDate.some(b => 
         b.customer_id !== currentCustomerId &&
-        ['Pending', 'Confirmed', 'Approved', 'Unavailable'].includes(b.status)
+        ['pending', 'confirmed', 'approved', 'unavailable', 'paid'].includes((b.status || '').toLowerCase())
     );
 
     if (hasActiveOtherBooking) {
@@ -560,6 +560,13 @@ const MyBooking = () => {
     if (isPastDate(selectedDate)) {
       alert('Cannot book a new event on a past date.')
       return
+    }
+
+    // Check if date is unavailable
+    const bookingStatus = getBookingStatus(selectedDate);
+    if (bookingStatus && (bookingStatus.status === 'Unavailable' || bookingStatus.isOther)) {
+         Swal.fire('Unavailable', 'This date is already booked by another customer.', 'error');
+         return;
     }
 
     if (bookingMode === 'package' && !selectedPackage) {
