@@ -414,7 +414,82 @@ const MyBooking = () => {
         }
       }, 3000); // Poll every 3 seconds
     }
-    return () => clearInterval(interval);
+    const handlePayNow = async (booking) => {
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4242';
+      
+      console.log('Initiating payment session for booking:', booking.id);
+      
+      Swal.fire({
+        title: 'Initiating Payment...',
+        text: 'Please wait while we redirect you to the secure payment page.',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      const paymentResponse = await axios.post(`${API_URL}/create-checkout-session`, {
+        booking_id: booking.id,
+        amount: booking.total_amount,
+        description: `Booking for ${booking.event_name}`,
+        remarks: booking.notes
+      });
+
+      const checkoutUrl = paymentResponse.data.data.attributes.checkout_url;
+      
+      if (checkoutUrl) {
+        console.log('Redirecting to payment:', checkoutUrl);
+        
+        // Store booking ID for PaymentStatus page
+        localStorage.setItem('pending_payment_booking_id', booking.id);
+
+        // Open PayMongo in new tab
+        window.open(checkoutUrl, '_blank');
+        
+        // Start polling
+        setPollingBookingId(booking.id);
+        setIsPolling(true);
+        
+        Swal.fire({
+          title: 'Payment in Progress',
+          text: 'A new tab has opened for payment. We are waiting for your confirmation...',
+          icon: 'info',
+          showConfirmButton: true,
+          confirmButtonText: 'I have completed the payment',
+          showCancelButton: false,
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        }).then((result) => {
+          if (result.isConfirmed) {
+            setIsPolling(false);
+            setPollingBookingId(null);
+            // Refresh bookings list
+            const customerId = user.id || user._id;
+            supabase
+              .from('bookings')
+              .select('*')
+              .eq('customer_id', customerId)
+              .order('created_at', { ascending: false })
+              .then(({ data: bookingsData }) => {
+                if (bookingsData) setBookings(bookingsData);
+              });
+          }
+        });
+      } else {
+        throw new Error('No checkout URL received');
+      }
+
+    } catch (error) {
+      console.error('Payment initiation failed:', error);
+      Swal.fire('Error', 'Payment initiation failed. Please try again later.', 'error');
+    }
+  }
+
+  return () => clearInterval(interval);
   }, [isPolling, pollingBookingId, user]);
 
   const handleBookEvent = async () => {
@@ -1038,8 +1113,8 @@ const MyBooking = () => {
                           <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusBadge(booking.status?.toLowerCase())}`}>
                             {booking.status}
                           </span>
-                          {/* Only show payment status if it exists (not null/empty) */}
-                          {booking.payment_status && (
+                          {/* Only show payment status if it exists (not null/empty) and booking is not cancelled/rejected */}
+                          {booking.payment_status && !['Cancelled', 'Rejected'].includes(booking.status) && (
                             <span className={`px-3 py-1 rounded-full text-sm font-medium border ${
                                 booking.payment_status === 'Paid' 
                                 ? 'bg-green-100 text-green-800 border-green-200'
@@ -1096,7 +1171,18 @@ const MyBooking = () => {
                          </div>
                          
                          {/* Actions */}
-                         <div className="flex gap-3 mt-4">
+                         <div className="flex gap-3 mt-4 items-center">
+                           {/* Pay Now Button - Only for Pending Payment */}
+                           {booking.payment_status === 'Pending' && !['Cancelled', 'Rejected'].includes(booking.status) && (
+                              <button 
+                                onClick={() => handlePayNow(booking)}
+                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm transition-colors shadow-sm flex items-center gap-2"
+                              >
+                                <FaMoneyBillWave />
+                                Pay Now!
+                              </button>
+                           )}
+
                            {booking.status !== 'Cancelled' && booking.status !== 'Refund Requested' && booking.status !== 'Rejected' && !isPastDate(new Date(booking.date)) && (
                              <button 
                                onClick={() => handleCancelBooking(booking.id)}
