@@ -492,6 +492,47 @@ const MyBooking = () => {
   return () => clearInterval(interval);
   }, [isPolling, pollingBookingId, user]);
 
+  // Listen for payment completion from other tabs
+  useEffect(() => {
+    const channel = new BroadcastChannel('payment_channel');
+    
+    channel.onmessage = async (event) => {
+      console.log('Received payment message:', event.data);
+      if (event.data.type === 'PAYMENT_COMPLETE' || event.data.type === 'PAYMENT_UPDATED') {
+        if (event.data.status === 'success' || event.data.type === 'PAYMENT_UPDATED') {
+            setIsPolling(false);
+            setPollingBookingId(null);
+            Swal.close(); // Close any open dialogs
+            
+            Swal.fire({
+                title: 'Payment Successful!',
+                text: 'Your payment has been confirmed.',
+                icon: 'success',
+                timer: 3000,
+                showConfirmButton: false
+            });
+
+            // Refresh bookings
+            const customerId = user?.id || user?._id;
+            if (customerId) {
+                const { data: bookingsData } = await supabase
+                  .from('bookings')
+                  .select('*')
+                  .eq('customer_id', customerId)
+                  .order('created_at', { ascending: false });
+                if (bookingsData) setBookings(bookingsData);
+            }
+        } else if (event.data.status === 'failed') {
+            setIsPolling(false);
+            setPollingBookingId(null);
+            Swal.fire('Payment Failed', 'The payment process was not completed.', 'error');
+        }
+      }
+    };
+
+    return () => channel.close();
+  }, [user]);
+
   const handleBookEvent = async () => {
     console.log('Attempting to book event...');
     console.log('Current user state:', user);

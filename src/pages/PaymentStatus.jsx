@@ -13,6 +13,15 @@ const PaymentStatus = () => {
   useEffect(() => {
     const updatePaymentStatus = async () => {
       const bookingId = localStorage.getItem('pending_payment_booking_id');
+      
+      // Notify other tabs about payment completion immediately
+      const channel = new BroadcastChannel('payment_channel');
+      channel.postMessage({ 
+        type: 'PAYMENT_COMPLETE', 
+        status: isSuccess ? 'success' : 'failed',
+        bookingId 
+      });
+
       if (isSuccess && bookingId) {
         console.log('Updating payment status for booking:', bookingId);
         try {
@@ -26,6 +35,9 @@ const PaymentStatus = () => {
           } else {
              console.log('Payment status updated to Paid');
              localStorage.removeItem('pending_payment_booking_id');
+             
+             // Send another success message after DB update just in case
+             channel.postMessage({ type: 'PAYMENT_UPDATED', bookingId });
           }
         } catch (err) {
           console.error('Unexpected error updating payment status:', err);
@@ -41,6 +53,9 @@ const PaymentStatus = () => {
     // Only redirect automatically if success to allow user to read error message if failed
     if (isSuccess) {
       const timer = setTimeout(() => {
+        const channel = new BroadcastChannel('payment_channel');
+        channel.postMessage({ type: 'FOCUS_TAB' });
+        
         window.close(); // Try to close the tab first
         // If script can't close it (security restriction), show message or navigate
         // navigate('/dashboard/customer/booking'); 
@@ -50,6 +65,9 @@ const PaymentStatus = () => {
   }, [navigate, isSuccess]);
 
   const handleClose = () => {
+    const channel = new BroadcastChannel('payment_channel');
+    channel.postMessage({ type: 'FOCUS_TAB' });
+    
     window.close();
     // If window.close() fails (e.g. not opened by script), fallback to navigate
     if (!window.closed) {
