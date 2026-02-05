@@ -562,7 +562,31 @@ const MyBooking = () => {
       return
     }
 
-    // Check if date is unavailable
+    // Double check with Database if date is already booked (Real-time check)
+    try {
+        const { data: existingBookings, error: checkError } = await supabase
+            .from('bookings')
+            .select('id, status')
+            .eq('date', formattedDate)
+            .neq('status', 'Cancelled')
+            .neq('status', 'Rejected')
+            .neq('status', 'Refunded');
+
+        if (checkError) throw checkError;
+
+        if (existingBookings && existingBookings.length > 0) {
+            Swal.fire('Unavailable', 'This date is already booked.', 'error');
+            // Refresh local calendar state to match DB
+            fetchBookedDates();
+            return;
+        }
+    } catch (err) {
+        console.error("Error checking date availability:", err);
+        Swal.fire('Error', 'Could not verify date availability. Please try again.', 'error');
+        return;
+    }
+
+    // Check local state availability (Fallback)
     const bookingStatus = getBookingStatus(selectedDate);
     if (bookingStatus && (bookingStatus.status === 'Unavailable' || bookingStatus.isOther)) {
          Swal.fire('Unavailable', 'This date is already booked by another customer.', 'error');
