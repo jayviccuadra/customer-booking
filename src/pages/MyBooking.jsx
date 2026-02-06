@@ -411,7 +411,8 @@ const MyBooking = () => {
           icon: 'info',
           showConfirmButton: true,
           confirmButtonText: 'I have completed the payment',
-          showCancelButton: false,
+          showCancelButton: true,
+          cancelButtonText: 'Close (I will pay later)',
           allowOutsideClick: false,
           allowEscapeKey: false,
           didOpen: () => {
@@ -430,7 +431,7 @@ const MyBooking = () => {
             try {
                 if (invoiceId) {
                     const verifyRes = await axios.get(`${API_URL}/verify-payment/${invoiceId}`);
-                    if (verifyRes.data.status === 'PAID') {
+                    if (verifyRes.data.status === 'PAID' || verifyRes.data.status === 'SETTLED') {
                          setIsPolling(false);
                          setPollingBookingId(null);
                          setPollingInvoiceId(null);
@@ -445,26 +446,30 @@ const MyBooking = () => {
                            .order('created_at', { ascending: false });
                          if (bookingsData) setBookings(bookingsData);
                          return;
+                    } else {
+                        // If not paid yet, show info
+                        Swal.fire({
+                            title: 'Payment Not Detected Yet',
+                            text: `Current status: ${verifyRes.data.status}. If you just paid, it might take a moment.`,
+                            icon: 'warning',
+                            confirmButtonText: 'Keep Waiting'
+                        }).then(() => {
+                             // If they want to keep waiting, we basically do nothing (polling continues if we didn't stop it)
+                             // But we need to reopen the "Payment in Progress" modal?
+                             // Or just rely on the background polling.
+                             // Actually, let's just let the background polling handle it.
+                        });
+                        return;
                     }
                 }
-            } catch (e) { console.error(e); }
-
-            // If not verified or error, still close but maybe warn? 
-            // Or just follow original logic:
-            setIsPolling(false);
-            setPollingBookingId(null);
-            setPollingInvoiceId(null);
-            
-            fetchBookedDates();
-            const customerId = user.id || user._id;
-            supabase
-              .from('bookings')
-              .select('*')
-              .eq('customer_id', customerId)
-              .order('created_at', { ascending: false })
-              .then(({ data: bookingsData }) => {
-                if (bookingsData) setBookings(bookingsData);
-              });
+            } catch (e) { 
+                console.error(e); 
+                Swal.fire('Error', 'Could not verify payment status. Please check your internet.', 'error');
+            }
+          } else if (result.dismiss === Swal.DismissReason.cancel) {
+              setIsPolling(false);
+              setPollingBookingId(null);
+              setPollingInvoiceId(null);
           }
         });
       } else {
@@ -486,7 +491,7 @@ const MyBooking = () => {
           // Verify with backend (Xendit)
           const response = await axios.get(`${API_URL}/verify-payment/${pollingInvoiceId}`);
           
-          if (response.data.status === 'PAID') {
+          if (response.data.status === 'PAID' || response.data.status === 'SETTLED') {
             setIsPolling(false);
             setPollingBookingId(null);
             setPollingInvoiceId(null);
