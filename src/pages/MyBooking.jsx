@@ -484,14 +484,34 @@ const MyBooking = () => {
 
   useEffect(() => {
     let interval;
-    if (isPolling && pollingInvoiceId) {
+    if (isPolling && (pollingInvoiceId || pollingBookingId)) {
       interval = setInterval(async () => {
         try {
-          const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4242';
-          // Verify with backend (Xendit)
-          const response = await axios.get(`${API_URL}/verify-payment/${pollingInvoiceId}`);
-          
-          if (response.data.status === 'PAID' || response.data.status === 'SETTLED') {
+          let isPaid = false;
+
+          // 1. Check via Backend (Xendit API)
+          if (pollingInvoiceId) {
+             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4242';
+             const response = await axios.get(`${API_URL}/verify-payment/${pollingInvoiceId}`);
+             if (response.data.status === 'PAID' || response.data.status === 'SETTLED') {
+                isPaid = true;
+             }
+          }
+
+          // 2. Check Supabase directly (As requested: if payment_status changes to Paid)
+          if (!isPaid && pollingBookingId) {
+             const { data: bookingData } = await supabase
+                .from('bookings')
+                .select('payment_status')
+                .eq('id', pollingBookingId)
+                .single();
+             
+             if (bookingData && bookingData.payment_status === 'Paid') {
+                isPaid = true;
+             }
+          }
+
+          if (isPaid) {
             setIsPolling(false);
             setPollingBookingId(null);
             setPollingInvoiceId(null);
@@ -528,7 +548,7 @@ const MyBooking = () => {
       }, 3000); // Poll every 3 seconds
     }
     return () => clearInterval(interval);
-  }, [isPolling, pollingInvoiceId, user]);
+  }, [isPolling, pollingInvoiceId, pollingBookingId, user]);
 
   // Listen for payment completion from other tabs
   useEffect(() => {
