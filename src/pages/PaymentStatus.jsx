@@ -27,7 +27,7 @@ const PaymentStatus = () => {
         try {
           const { error } = await supabase
             .from('bookings')
-            .update({ payment_status: 'Paid' })
+            .update({ payment_status: 'Paid', status: 'Confirmed' })
             .eq('id', bookingId);
           
           if (error) {

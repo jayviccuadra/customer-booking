@@ -363,6 +363,7 @@ const MyBooking = () => {
 
   const [isPolling, setIsPolling] = useState(false);
   const [pollingBookingId, setPollingBookingId] = useState(null);
+  const [pollingInvoiceId, setPollingInvoiceId] = useState(null);
 
   const handlePayNow = async (booking) => {
     try {
@@ -383,10 +384,12 @@ const MyBooking = () => {
         booking_id: booking.id,
         amount: booking.total_amount,
         description: `Booking for ${booking.event_name}`,
-        remarks: booking.notes
+        remarks: booking.notes,
+        customer_email: user.email // Ensure email is sent
       });
 
       const checkoutUrl = paymentResponse.data.data.attributes.checkout_url;
+      const invoiceId = paymentResponse.data.data.attributes.invoice_id;
       
       if (checkoutUrl) {
         console.log('Redirecting to payment:', checkoutUrl);
@@ -399,6 +402,7 @@ const MyBooking = () => {
         
         // Start polling
         setPollingBookingId(booking.id);
+        setPollingInvoiceId(invoiceId);
         setIsPolling(true);
         
         Swal.fire({
@@ -413,15 +417,45 @@ const MyBooking = () => {
           didOpen: () => {
             Swal.showLoading();
           }
-        }).then((result) => {
+        }).then(async (result) => {
           if (result.isConfirmed) {
+            // Manual verification check before closing
+            Swal.fire({
+                title: 'Verifying...',
+                text: 'Checking payment status...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            try {
+                if (invoiceId) {
+                    const verifyRes = await axios.get(`${API_URL}/verify-payment/${invoiceId}`);
+                    if (verifyRes.data.status === 'PAID') {
+                         setIsPolling(false);
+                         setPollingBookingId(null);
+                         setPollingInvoiceId(null);
+                         Swal.fire('Success', 'Payment confirmed!', 'success');
+                         fetchBookedDates();
+                         // Refresh bookings
+                         const customerId = user.id || user._id;
+                         const { data: bookingsData } = await supabase
+                           .from('bookings')
+                           .select('*')
+                           .eq('customer_id', customerId)
+                           .order('created_at', { ascending: false });
+                         if (bookingsData) setBookings(bookingsData);
+                         return;
+                    }
+                }
+            } catch (e) { console.error(e); }
+
+            // If not verified or error, still close but maybe warn? 
+            // Or just follow original logic:
             setIsPolling(false);
             setPollingBookingId(null);
+            setPollingInvoiceId(null);
             
-            // Refresh calendar availability
             fetchBookedDates();
-
-            // Refresh bookings list
             const customerId = user.id || user._id;
             supabase
               .from('bookings')
@@ -445,18 +479,17 @@ const MyBooking = () => {
 
   useEffect(() => {
     let interval;
-    if (isPolling && pollingBookingId) {
+    if (isPolling && pollingInvoiceId) {
       interval = setInterval(async () => {
         try {
-          const { data, error } = await supabase
-            .from('bookings')
-            .select('payment_status')
-            .eq('id', pollingBookingId)
-            .single();
-
-          if (data && data.payment_status === 'Paid') {
+          const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4242';
+          // Verify with backend (Xendit)
+          const response = await axios.get(`${API_URL}/verify-payment/${pollingInvoiceId}`);
+          
+          if (response.data.status === 'PAID') {
             setIsPolling(false);
             setPollingBookingId(null);
+            setPollingInvoiceId(null);
             
             // Close all swal instances immediately
             Swal.close();
@@ -473,8 +506,7 @@ const MyBooking = () => {
             }, 300);
 
             fetchBookedDates();
-            // Redirect or refresh bookings list
-            // Since we are already on the booking page, we just refresh the data
+            // Refresh bookings list
             const customerId = user.id || user._id;
             const { data: bookingsData } = await supabase
               .from('bookings')
@@ -484,9 +516,6 @@ const MyBooking = () => {
             if (bookingsData) setBookings(bookingsData);
             
             setShowBookingSection(false);
-            
-            // Optionally redirect to main dashboard if requested, but staying here shows the updated list
-            // window.location.href = '/dashboard/customer'; 
           }
         } catch (err) {
           console.error("Polling error:", err);
@@ -494,7 +523,7 @@ const MyBooking = () => {
       }, 3000); // Poll every 3 seconds
     }
     return () => clearInterval(interval);
-  }, [isPolling, pollingBookingId, user]);
+  }, [isPolling, pollingInvoiceId, user]);
 
   // Listen for payment completion from other tabs
   useEffect(() => {
@@ -644,7 +673,7 @@ const MyBooking = () => {
         text: 'Choose how you would like to pay for your booking.',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: 'Online Payment (PayMongo)',
+        confirmButtonText: 'Online Payment (Xendit)',
         cancelButtonText: 'Cash Payment',
         confirmButtonColor: '#3085d6',
         cancelButtonColor: '#d33',
