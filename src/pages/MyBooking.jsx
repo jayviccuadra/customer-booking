@@ -367,9 +367,10 @@ const MyBooking = () => {
 
   const handlePayNow = async (booking) => {
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4242';
+      const API_URL = import.meta.env.VITE_API_URL || 'https://client-booking-server.onrender.com';
       
       console.log('Initiating payment session for booking:', booking.id);
+      console.log('Using API URL:', API_URL);
       
       Swal.fire({
         title: 'Initiating Payment...',
@@ -491,7 +492,7 @@ const MyBooking = () => {
 
           // 1. Check via Backend (Xendit API)
           if (pollingInvoiceId) {
-             const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4242';
+             const API_URL = import.meta.env.VITE_API_URL || 'https://client-booking-server.onrender.com';
              const response = await axios.get(`${API_URL}/verify-payment/${pollingInvoiceId}`);
              if (response.data.status === 'PAID' || response.data.status === 'SETTLED') {
                 isPaid = true;
