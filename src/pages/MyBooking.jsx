@@ -1317,7 +1317,7 @@ const MyBooking = () => {
                               </button>
                            )}
 
-                           {booking.status !== 'Cancelled' && booking.status !== 'Refund Requested' && booking.status !== 'Rejected' && !isPastDate(new Date(booking.date)) && (
+                           {booking.status !== 'Cancelled' && booking.status !== 'Refund Requested' && booking.status !== 'Rejected' && booking.status !== 'Completed' && !isPastDate(new Date(booking.date)) && (
                              <button 
                                onClick={() => handleCancelBooking(booking.id)}
                                className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 font-medium text-sm transition-colors"
@@ -1336,7 +1336,7 @@ const MyBooking = () => {
                                   - This implies if they cancel, the status becomes 'Cancelled', then they should see 'Request Refund'.
                                   - So we show it if status is NOT 'Refund Requested' AND payment is 'Paid'.
                            */}
-                           {(booking.payment_status === 'Paid') && booking.status !== 'Refund Requested' && (
+                           {(booking.payment_status === 'Paid') && booking.status !== 'Refund Requested' && booking.status !== 'Completed' && (
                              <button 
                                onClick={() => handleRequestRefund(booking.id)}
                                className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 font-medium text-sm transition-colors"
